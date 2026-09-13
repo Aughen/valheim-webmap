@@ -4,14 +4,16 @@ Same package for both stores: `dist/ValheimWebMap-<version>.zip` from
 `build.ps1`. Zip root holds `manifest.json`, `README.md`, `CHANGELOG.md`,
 `icon.png` (256×256), `LICENSE`, `WebMap/`. Never any `map_data/`.
 
-Screenshots in `docs/screenshots/` (1568×778, from the live server):
+Screenshots in `docs/screenshots/` (1568 px wide, from the live server):
 
-* `08-hero-3d` house in the forest by the water, `04-players` Vhauss base
-  with the Players tab, `03-base-3d` Smokey longhouse and fields,
-  `06-markers` pier house in the pines with the Markers tab, `05-stats`,
-  `09-lake-3d` wide lake view.
-* `01-overview-2d` whole island with fog, `02-base-2d` base footprints,
-  `07-events`.
+* `08-hero-3d` pine forest with birches, `03-base-3d` Vhauss base by the
+  water, `09-pier-3d` pier house in the pines, `10-shore-3d` shore base,
+  `04-players` Smokey longhouse with the Players tab, `05-stats`,
+  `06-markers` portal hub with the Markers tab.
+* `01-overview-2d` whole island with fog, `02-base-2d` base footprints with
+  the tree and rock overlay, `07-events`.
+* Clips: `valheim-webmap-3d-tour.gif` (2D to 3D, orbit, trees toggle) and
+  `valheim-webmap-layers-markers.gif` (overlay toggle, marker jump, 3D).
 Upload the 3D ones first; stores show the first image as the cover.
 
 ## Thunderstore

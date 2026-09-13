@@ -31,7 +31,7 @@ Server-side mod. Publishes live web map of your Valheim world. Share
 * Permalinks, search, mobile layout, dark UI, Discord webhook,
   `POST /announce`.
 
-![Player base in 3D](docs/screenshots/04-players.jpg)
+![Player base in 3D](docs/screenshots/03-base-3d.jpg)
 ![2D map](docs/screenshots/02-base-2d.jpg)
 ![Stats](docs/screenshots/05-stats.jpg)
 

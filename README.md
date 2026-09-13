@@ -213,18 +213,12 @@ against copy of your world.
 docker compose -f tools\docker-compose.test.yml up      # first run downloads server
 ```
 
-Then <http://localhost:3000>. In game: Join by IP, `127.0.0.1:2456`,
-password `testpass123`.
+Then <http://localhost:3000>. In game: Join by IP, `127.0.0.1:2456`
 
 Copied world starts with empty fog. Exploration lives in player files, not
 world. Map stays black until someone walks. For tests set `reveal_all = true`
 in `valheim-test\config\bepinex\com.valheimwebmap.server.cfg`. Restart.
 Tiles still render lazily.
-
-## How it works
-
-Publishing: [docs/LISTING.md](docs/LISTING.md). Internals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Build problems:
-[docs/BUILD_NOTES.md](docs/BUILD_NOTES.md).
 
 ## Licence
 

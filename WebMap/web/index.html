@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Valheim WebMap</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 2 8.5 12 14l10-5.5L12 3Zm-8 9.2L2 13.3 12 19l10-5.7-2-1.1-8 4.5-8-4.5Z"/></symbol>
+    <symbol id="i-players" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5Z"/></symbol>
+    <symbol id="i-markers" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20V10h3v10H4Zm6.5 0V4h3v16h-3ZM17 20v-7h3v7h-3Z"/></symbol>
+    <symbol id="i-events" viewBox="0 0 24 24"><path d="M4 4h16v12H7l-3 3V4Zm3 4v2h10V8H7Zm0 4v2h7v-2H7Z"/></symbol>
+    <symbol id="i-3d" viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.6l6 3.4v6.7l-6-3.4V9.6Zm8 10.1v-6.7l6-3.4v6.7l-6 3.4Z"/></symbol>
+    <symbol id="i-2d" viewBox="0 0 24 24"><path d="M3 5h18v14H3V5Zm2 2v10h14V7H5Zm2 2h4v2H7V9Zm0 4h10v2H7v-2Z"/></symbol>
+    <symbol id="i-follow" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 3h-2.06A7 7 0 0 0 13 5.06V3h-2v2.06A7 7 0 0 0 5.06 11H3v2h2.06A7 7 0 0 0 11 18.94V21h2v-2.06A7 7 0 0 0 18.94 13H21v-2Zm-9 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a1 1 0 0 1 1.4 1.4L12 13.4a1 1 0 0 1-1.4 0Zm-2.1 4.9a3 3 0 0 1-4.2-4.2l2.8-2.8-1.4-1.4-2.8 2.8a5 5 0 1 0 7 7l2.8-2.8-1.4-1.4-2.8 2.8Zm7-14.2-2.8 2.8 1.4 1.4 2.8-2.8a3 3 0 1 1 4.2 4.2l-2.8 2.8 1.4 1.4 2.8-2.8a5 5 0 0 0-7-7Z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.4 5 12.6 12.6-1.4 1.4L5 6.4 6.4 5Zm12.6 1.4L6.4 19 5 17.6 17.6 5 19 6.4Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M10 4a6 6 0 1 0 3.7 10.7l5 5 1.4-1.4-5-5A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m12 3 9 8h-3v9h-4v-6h-4v6H6v-9H3l9-8Z"/></symbol>
+  </defs>
+</svg>
+
+<div id="app" class="app" data-mode="2d">
+  <div id="map" class="map"></div>
+  <div id="view3d" class="view3d" hidden><canvas id="gl"></canvas>
+    <div class="v3d-help">Drag to pan · right-drag / two fingers to orbit · wheel to zoom</div>
+  </div>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btn-menu" title="Menu"><svg><use href="#i-menu"/></svg></button>
+    <div class="title"><span id="title">Valheim</span><span class="sub" id="subtitle">WebMap</span></div>
+    <div class="search">
+      <svg><use href="#i-search"/></svg>
+      <input id="search" type="search" placeholder="Player, marker, or x,z…" autocomplete="off" spellcheck="false">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <div class="topbar-right">
+      <span id="online-pill" class="pill" title="Players online">0 online</span>
+      <button class="icon-btn" id="btn-home" title="Go to spawn"><svg><use href="#i-home"/></svg></button>
+      <button class="icon-btn" id="btn-link" title="Copy link to this view"><svg><use href="#i-link"/></svg></button>
+      <button class="icon-btn" id="btn-fullscreen" title="Fullscreen"><svg><use href="#i-fullscreen"/></svg></button>
+      <button class="mode-btn" id="btn-mode" title="Switch to 3D"><svg><use href="#i-3d"/></svg><span>3D</span></button>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <nav class="tabs">
+      <button data-tab="layers" class="active" title="Layers"><svg><use href="#i-layers"/></svg><span>Layers</span></button>
+      <button data-tab="players" title="Players"><svg><use href="#i-players"/></svg><span>Players</span></button>
+      <button data-tab="markers" title="Markers"><svg><use href="#i-markers"/></svg><span>Markers</span></button>
+      <button data-tab="stats" title="Stats"><svg><use href="#i-stats"/></svg><span>Stats</span></button>
+      <button data-tab="events" title="Events"><svg><use href="#i-events"/></svg><span>Events</span><em id="events-badge" hidden></em></button>
+      <button class="close" id="btn-close-sidebar" title="Close"><svg><use href="#i-close"/></svg></button>
+    </nav>
+    <section class="panel active" data-panel="layers" id="panel-layers"></section>
+    <section class="panel" data-panel="players" id="panel-players"></section>
+    <section class="panel" data-panel="markers" id="panel-markers"></section>
+    <section class="panel" data-panel="stats" id="panel-stats"></section>
+    <section class="panel" data-panel="events" id="panel-events"></section>
+  </aside>
+
+  <div class="hud">
+    <div id="coords" class="coords">0, 0</div>
+    <div id="biome" class="biome"></div>
+    <div id="render-status" class="render-status" title="Tiles on disk / waiting to render"></div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+  <div id="conn" class="conn" hidden>Reconnecting…</div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

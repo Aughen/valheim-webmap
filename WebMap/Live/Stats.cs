@@ -1,0 +1,279 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using UnityEngine;
+using WebMap.Tiles;
+using WebMap.Util;
+using WebMap.World;
+
+namespace WebMap.Live
+{
+    // Player and server statistics, persisted to stats.json beside the world's
+    // map data.
+    //
+    // Per player (keyed by their platform id, with the name as a fallback):
+    // first and last seen, time played, sessions, deaths, distance walked,
+    // portal trips, biomes visited, cells of fog they personally lifted. Per
+    // server: online history for the last day, the in-game day, explored
+    // percentage, and whatever the world sweep counted.
+    //
+    // Fed once a second from the player snapshot on the main thread; all the
+    // JSON is built there too and only read elsewhere.
+    internal static class Stats
+    {
+        public sealed class PlayerStat
+        {
+            public string key, name;
+            public string firstSeen, lastSeen;
+            public double playtime;          // seconds
+            public int sessions, deaths, portalTrips, revealed;
+            public double distance;          // metres
+            public HashSet<string> biomes = new HashSet<string>();
+            public float lastX, lastZ; public bool hasLast;
+            public bool online;
+            public string lastBiome = "";
+        }
+
+        private static readonly Dictionary<string, PlayerStat> players = new Dictionary<string, PlayerStat>();
+        private static readonly List<KeyValuePair<long, int>> onlineHistory = new List<KeyValuePair<long, int>>();   // unix ts, count
+        private static long lastHistoryBucket;
+        private static bool dirty;
+        private static double lastTick;
+        private static volatile string json = "{}";
+        private static string serverStartedUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+
+        public static string Json => json;
+
+        private static string StatsPath => Path.Combine(WebMap.worldDataPath ?? "", "stats.json");
+
+        public static void Load()
+        {
+            players.Clear();
+            onlineHistory.Clear();
+            try
+            {
+                if (!File.Exists(StatsPath)) return;
+                var doc = JsonParser.ParseObject(File.ReadAllText(StatsPath));
+                var ps = JsonParser.Arr(doc, "players");
+                if (ps != null)
+                    foreach (var po in ps)
+                    {
+                        var d = po as Dictionary<string, object>;
+                        if (d == null) continue;
+                        var s = new PlayerStat
+                        {
+                            key = JsonParser.Str(d, "key"), name = JsonParser.Str(d, "name"),
+                            firstSeen = JsonParser.Str(d, "firstSeen"), lastSeen = JsonParser.Str(d, "lastSeen"),
+                            playtime = JsonParser.Num(d, "playtime"), sessions = (int)JsonParser.Num(d, "sessions"),
+                            deaths = (int)JsonParser.Num(d, "deaths"), distance = JsonParser.Num(d, "distance"),
+                            portalTrips = (int)JsonParser.Num(d, "portalTrips"), revealed = (int)JsonParser.Num(d, "revealed"),
+                            lastX = (float)JsonParser.Num(d, "lastX"), lastZ = (float)JsonParser.Num(d, "lastZ"),
+                            hasLast = d.ContainsKey("lastX")
+                        };
+                        var bs = JsonParser.Arr(d, "biomes");
+                        if (bs != null) foreach (var b in bs) if (b is string bn) s.biomes.Add(bn);
+                        if (!string.IsNullOrEmpty(s.key)) players[s.key] = s;
+                    }
+                var hist = JsonParser.Arr(doc, "onlineHistory");
+                if (hist != null)
+                    foreach (var ho in hist)
+                        if (ho is List<object> pair && pair.Count == 2 && pair[0] is double ts && pair[1] is double n)
+                            onlineHistory.Add(new KeyValuePair<long, int>((long)ts, (int)n));
+                ZLog.Log($"WebMap: stats loaded for {players.Count} players");
+            }
+            catch (Exception e) { ZLog.LogWarning("WebMap: stats.json not readable: " + e.Message); }
+        }
+
+        public static void Save(bool force = false)
+        {
+            if (!dirty && !force) return;
+            try
+            {
+                var j = new JsonWriter(4096);
+                j.BeginObject();
+                j.Prop("savedUtc", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+                j.Key("players").BeginArray();
+                foreach (var s in players.Values) WritePlayer(j, s, full: true);
+                j.End();
+                j.Key("onlineHistory").BeginArray();
+                foreach (var kv in onlineHistory) j.BeginArray().Value(kv.Key).Value(kv.Value).End();
+                j.End();
+                j.End();
+                string tmp = StatsPath + ".tmp";
+                File.WriteAllText(tmp, j.ToString());
+                if (File.Exists(StatsPath)) File.Delete(StatsPath);
+                File.Move(tmp, StatsPath);
+                dirty = false;
+            }
+            catch (Exception e) { ZLog.LogWarning("WebMap: could not save stats.json: " + e.Message); }
+        }
+
+        private static void WritePlayer(JsonWriter j, PlayerStat s, bool full)
+        {
+            j.BeginObject();
+            j.Prop("key", s.key).Prop("name", s.name).Prop("firstSeen", s.firstSeen).Prop("lastSeen", s.lastSeen);
+            j.Prop("playtime", Math.Round(s.playtime), 0).Prop("sessions", s.sessions).Prop("deaths", s.deaths);
+            j.Prop("distance", Math.Round(s.distance), 0).Prop("portalTrips", s.portalTrips).Prop("revealed", s.revealed);
+            j.Prop("online", s.online);
+            if (s.hasLast && (full || WebMapConfig.ALWAYS_VISIBLE || WebMapConfig.SHOW_LAST_SEEN_POSITION)) j.Prop("lastX", s.lastX, 1).Prop("lastZ", s.lastZ, 1);
+            j.Prop("lastBiome", s.lastBiome);
+            j.Key("biomes").BeginArray();
+            foreach (var b in s.biomes) j.Value(b);
+            j.End();
+            j.End();
+        }
+
+        public static PlayerStat Get(string key, string name)
+        {
+            if (string.IsNullOrEmpty(key)) key = "name:" + name;
+            if (!players.TryGetValue(key, out var s))
+            {
+                s = new PlayerStat { key = key, name = name, firstSeen = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) };
+                players[key] = s;
+                dirty = true;
+            }
+            if (!string.IsNullOrEmpty(name)) s.name = name;
+            return s;
+        }
+
+        public static void OnJoin(string key, string name)
+        {
+            var s = Get(key, name);
+            s.sessions++;
+            s.online = true;
+            s.lastSeen = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+            dirty = true;
+        }
+
+        public static void OnLeave(string key, string name)
+        {
+            var s = Get(key, name);
+            s.online = false;
+            s.lastSeen = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+            dirty = true;
+        }
+
+        public static void OnDeath(string name)
+        {
+            foreach (var s in players.Values)
+                if (s.name == name && s.online) { s.deaths++; dirty = true; return; }
+            foreach (var s in players.Values)
+                if (s.name == name) { s.deaths++; dirty = true; return; }
+        }
+
+        // Main thread, once per snapshot. `visible` players report a position.
+        public static void OnTick(List<Players.Snapshot> online)
+        {
+            double now = Time.realtimeSinceStartupAsDouble;
+            double dt = lastTick > 0 ? Math.Min(now - lastTick, 10.0) : 0.0;
+            lastTick = now;
+
+            var seen = new HashSet<string>();
+            foreach (var p in online)
+            {
+                var s = Get(p.key, p.name);
+                seen.Add(s.key);
+                if (!s.online) { s.online = true; s.sessions++; }
+                s.playtime += dt;
+                s.lastSeen = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+                if (p.tracked)
+                {
+                    if (s.hasLast)
+                    {
+                        double d = Math.Sqrt((p.x - s.lastX) * (p.x - s.lastX) + (p.z - s.lastZ) * (p.z - s.lastZ));
+                        if (dt > 0 && d / dt > 60.0 && d > 150.0) s.portalTrips++;   // faster than any boat: a portal
+                        else s.distance += d;
+                    }
+                    s.lastX = p.x; s.lastZ = p.z; s.hasLast = true;
+                    if (!string.IsNullOrEmpty(p.biome)) { s.lastBiome = p.biome; if (s.biomes.Add(p.biome)) dirty = true; }
+                }
+            }
+            foreach (var s in players.Values) if (s.online && !seen.Contains(s.key)) s.online = false;
+
+            // online history, 5-minute buckets
+            long bucket = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 300 * 300;
+            if (bucket != lastHistoryBucket)
+            {
+                lastHistoryBucket = bucket;
+                onlineHistory.Add(new KeyValuePair<long, int>(bucket, online.Count));
+                while (onlineHistory.Count > 288 * 7) onlineHistory.RemoveAt(0);   // a week
+                dirty = true;
+            }
+            else if (onlineHistory.Count > 0 && online.Count > onlineHistory[onlineHistory.Count - 1].Value)
+            {
+                onlineHistory[onlineHistory.Count - 1] = new KeyValuePair<long, int>(bucket, online.Count);
+            }
+            if (dt > 0) dirty = true;
+            Rebuild(online.Count);
+        }
+
+        public static void OnRevealed(string key, string name, int cells)
+        {
+            if (cells <= 0) return;
+            var s = Get(key, name);
+            s.revealed += cells;
+            dirty = true;
+        }
+
+        public static void OnSweep() { Rebuild(-1); }
+
+        private static int lastOnlineCount;
+        private static void Rebuild(int onlineCount)
+        {
+            if (onlineCount >= 0) lastOnlineCount = onlineCount;
+            try
+            {
+                var j = new JsonWriter(4096);
+                j.BeginObject();
+                j.Key("server").BeginObject();
+                j.Prop("startedUtc", serverStartedUtc);
+                j.Prop("nowUtc", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+                j.Prop("online", lastOnlineCount);
+                WorldTime(j);
+                j.Prop("exploredPercent", Fog.ExploredPercent(), 2);
+                j.Prop("exploredCells", Fog.ExploredCells);
+                j.Prop("structures", Structures.Total);
+                j.Prop("trees", Vegetation.LastTrees);
+                j.Prop("rocks", Vegetation.LastRocks);
+                j.Prop("terraformedZones", TerrainPatches.Count);
+                j.Prop("objects", WorldSweep.LastScanned);
+                j.Prop("sweeps", WorldSweep.Sweeps);
+                j.Prop("lastSweepUtc", WorldSweep.LastSweepUtc == default ? "" : WorldSweep.LastSweepUtc.ToString("o", CultureInfo.InvariantCulture));
+                j.Prop("lastSweepSeconds", WorldSweep.LastSweepSeconds, 1);
+                j.PropRaw("tiles", TileStore.StatusJson());
+                j.End();
+                j.Key("onlineHistory").BeginArray();
+                int from = Math.Max(0, onlineHistory.Count - 288);
+                for (int i = from; i < onlineHistory.Count; i++) j.BeginArray().Value(onlineHistory[i].Key).Value(onlineHistory[i].Value).End();
+                j.End();
+                j.Key("players").BeginArray();
+                var list = new List<PlayerStat>(players.Values);
+                list.Sort((a, b) => b.playtime.CompareTo(a.playtime));
+                foreach (var s in list) WritePlayer(j, s, full: false);
+                j.End();
+                j.End();
+                json = j.ToString();
+            }
+            catch (Exception e)
+            {
+                if (WebMapConfig.DEBUG) ZLog.LogWarning("WebMap: stats rebuild failed: " + e.Message);
+            }
+        }
+
+        private static void WorldTime(JsonWriter j)
+        {
+            try
+            {
+                double t = ZNet.instance != null ? ZNet.instance.GetTimeSeconds() : 0;
+                float dayLen = 1800f;
+                try { if (EnvMan.instance != null) dayLen = EnvMan.instance.m_dayLengthSec; } catch { }
+                int day = (int)(t / dayLen);
+                double frac = (t % dayLen) / dayLen;
+                j.Prop("worldTime", t, 0).Prop("day", day).Prop("dayFraction", frac, 3);
+                j.Prop("night", frac < 0.15 || frac > 0.85);
+            }
+            catch { }
+        }
+    }
+}

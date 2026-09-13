@@ -1,0 +1,173 @@
+using System;
+
+namespace WebMap.Tiles
+{
+    // Colours for the rendered map. Kept in one place so the look can be tuned
+    // without touching the renderer. All colours are plain bytes: the renderer
+    // never allocates Unity Color structs on worker threads.
+    internal static class Palette
+    {
+        public struct Rgb
+        {
+            public byte r, g, b;
+            public Rgb(int r, int g, int b) { this.r = (byte)r; this.g = (byte)g; this.b = (byte)b; }
+            public static Rgb Lerp(Rgb a, Rgb b, float t)
+            {
+                if (t <= 0) return a; if (t >= 1) return b;
+                return new Rgb((int)(a.r + (b.r - a.r) * t), (int)(a.g + (b.g - a.g) * t), (int)(a.b + (b.b - a.b) * t));
+            }
+            public Rgb Scale(float f)
+            {
+                return new Rgb(Clamp(r * f), Clamp(g * f), Clamp(b * f));
+            }
+            private static int Clamp(float v) => v < 0 ? 0 : v > 255 ? 255 : (int)v;
+        }
+
+        // Heightmap.Biome values (the enum is a bit field in the game).
+        public const int B_NONE = 0, B_MEADOWS = 1, B_SWAMP = 2, B_MOUNTAIN = 4, B_BLACKFOREST = 8,
+                         B_PLAINS = 16, B_ASHLANDS = 32, B_DEEPNORTH = 64, B_OCEAN = 256, B_MISTLANDS = 512;
+
+        public static readonly Rgb Meadows     = new Rgb(112, 146, 72);
+        public static readonly Rgb BlackForest = new Rgb(64, 84, 48);
+        public static readonly Rgb Swamp       = new Rgb(84, 82, 56);
+        public static readonly Rgb MountainRock= new Rgb(138, 136, 132);
+        public static readonly Rgb Snow        = new Rgb(232, 236, 240);
+        public static readonly Rgb Plains      = new Rgb(188, 172, 98);
+        public static readonly Rgb Mistlands   = new Rgb(96, 92, 108);
+        public static readonly Rgb Ashlands    = new Rgb(104, 52, 42);
+        public static readonly Rgb AshlandsLava= new Rgb(200, 90, 30);
+        public static readonly Rgb DeepNorth   = new Rgb(220, 228, 236);
+        public static readonly Rgb Sand        = new Rgb(196, 184, 140);
+        public static readonly Rgb Shore       = new Rgb(150, 140, 110);
+        public static readonly Rgb WaterShallow= new Rgb(52, 116, 148);
+        public static readonly Rgb WaterDeep   = new Rgb(20, 44, 82);
+        public static readonly Rgb Unknown     = new Rgb(80, 80, 80);
+
+        public static readonly Rgb PaintDirt      = new Rgb(112, 86, 60);
+        public static readonly Rgb PaintCultivated= new Rgb(92, 62, 40);
+        public static readonly Rgb PaintPaved     = new Rgb(122, 120, 114);
+
+        public static Rgb Biome(int biome)
+        {
+            switch (biome)
+            {
+                case B_MEADOWS: return Meadows;
+                case B_BLACKFOREST: return BlackForest;
+                case B_SWAMP: return Swamp;
+                case B_MOUNTAIN: return MountainRock;
+                case B_PLAINS: return Plains;
+                case B_MISTLANDS: return Mistlands;
+                case B_ASHLANDS: return Ashlands;
+                case B_DEEPNORTH: return DeepNorth;
+                case B_OCEAN: return WaterDeep;
+                default: return Unknown;
+            }
+        }
+
+        public static string BiomeName(int biome)
+        {
+            switch (biome)
+            {
+                case B_MEADOWS: return "Meadows";
+                case B_BLACKFOREST: return "Black Forest";
+                case B_SWAMP: return "Swamp";
+                case B_MOUNTAIN: return "Mountain";
+                case B_PLAINS: return "Plains";
+                case B_MISTLANDS: return "Mistlands";
+                case B_ASHLANDS: return "Ashlands";
+                case B_DEEPNORTH: return "Deep North";
+                case B_OCEAN: return "Ocean";
+                default: return "Unknown";
+            }
+        }
+
+        // Vegetation classes baked into the tiles and instanced in 3D.
+        public enum Veg : byte { None = 0, Deciduous = 1, Conifer = 2, SwampTree = 3, MistTree = 4, DeadTree = 5, Bush = 6, Rock = 7, Ore = 8, Stump = 9, Berry = 10, AshTree = 11 }
+
+        public static Rgb VegColor(Veg v)
+        {
+            switch (v)
+            {
+                case Veg.Deciduous: return new Rgb(86, 138, 58);
+                case Veg.Conifer:   return new Rgb(44, 82, 52);
+                case Veg.SwampTree: return new Rgb(56, 62, 40);
+                case Veg.MistTree:  return new Rgb(74, 104, 112);
+                case Veg.DeadTree:  return new Rgb(70, 56, 46);
+                case Veg.AshTree:   return new Rgb(60, 40, 34);
+                case Veg.Bush:      return new Rgb(70, 110, 50);
+                case Veg.Berry:     return new Rgb(90, 120, 60);
+                case Veg.Rock:      return new Rgb(118, 118, 112);
+                case Veg.Ore:       return new Rgb(134, 104, 74);
+                case Veg.Stump:     return new Rgb(96, 70, 44);
+                default:            return Unknown;
+            }
+        }
+
+        // Canopy / footprint radius in metres for a size class 1.0.
+        public static float VegRadius(Veg v)
+        {
+            switch (v)
+            {
+                case Veg.Deciduous: return 4.5f;
+                case Veg.Conifer:   return 3.0f;
+                case Veg.SwampTree: return 3.0f;
+                case Veg.MistTree:  return 4.0f;
+                case Veg.DeadTree:  return 2.5f;
+                case Veg.AshTree:   return 3.0f;
+                case Veg.Bush:      return 1.3f;
+                case Veg.Berry:     return 1.0f;
+                case Veg.Rock:      return 2.5f;
+                case Veg.Ore:       return 2.5f;
+                case Veg.Stump:     return 0.7f;
+                default:            return 1f;
+            }
+        }
+
+        // Approximate height in metres for the 3D view, size class 1.0.
+        public static float VegHeight(Veg v)
+        {
+            switch (v)
+            {
+                case Veg.Deciduous: return 12f;
+                case Veg.Conifer:   return 16f;
+                case Veg.SwampTree: return 10f;
+                case Veg.MistTree:  return 14f;
+                case Veg.DeadTree:  return 7f;
+                case Veg.AshTree:   return 9f;
+                case Veg.Bush:      return 1.5f;
+                case Veg.Berry:     return 1.0f;
+                case Veg.Rock:      return 3f;
+                case Veg.Ore:       return 3f;
+                case Veg.Stump:     return 0.6f;
+                default:            return 1f;
+            }
+        }
+
+        // Build materials for structures (2D fill and 3D box colour).
+        public enum Material : byte { Wood = 0, CoreWood = 1, DarkWood = 2, Stone = 3, BlackMarble = 4, Iron = 5, Thatch = 6, Fire = 7, Portal = 8, Crystal = 9, Grausten = 10, Flametal = 11, Misc = 12, Cloth = 13, Ashwood = 14 }
+
+        public static Rgb MaterialColor(Material m)
+        {
+            switch (m)
+            {
+                case Material.Wood:        return new Rgb(160, 116, 70);
+                case Material.CoreWood:    return new Rgb(132, 92, 56);
+                case Material.DarkWood:    return new Rgb(92, 66, 46);
+                case Material.Ashwood:     return new Rgb(112, 74, 52);
+                case Material.Stone:       return new Rgb(154, 152, 146);
+                case Material.Grausten:    return new Rgb(120, 128, 136);
+                case Material.BlackMarble: return new Rgb(66, 66, 82);
+                case Material.Iron:        return new Rgb(118, 126, 140);
+                case Material.Flametal:    return new Rgb(170, 100, 60);
+                case Material.Thatch:      return new Rgb(198, 162, 88);
+                case Material.Fire:        return new Rgb(230, 130, 50);
+                case Material.Portal:      return new Rgb(90, 200, 210);
+                case Material.Crystal:     return new Rgb(170, 210, 230);
+                case Material.Cloth:       return new Rgb(180, 170, 150);
+                default:                   return new Rgb(150, 130, 110);
+            }
+        }
+
+        public static string MaterialName(Material m) => m.ToString();
+    }
+}

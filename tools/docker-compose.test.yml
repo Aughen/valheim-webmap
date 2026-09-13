@@ -1,0 +1,36 @@
+# A local Valheim 1.0 dedicated server for testing WebMap, using the same image
+# as production (lloesche/valheim-server). Works with Docker Desktop on Windows.
+#
+#   1. Put a copy of your world folder at  valheim-test/config/worlds_local/<World>/
+#      (Valheim 1.0 worlds are folders: _main.N.db2, .fwl2, .chunks, .ok, *.chunk)
+#   2. Build the mod and deploy it:  .\build.ps1 -Deploy valheim-test\plugins
+#   3. docker compose -f tools/docker-compose.test.yml up
+#      (first start downloads the dedicated server, ~1 GB)
+#   4. http://localhost:3000   — join in game with "Join by IP" -> 127.0.0.1:2456
+#
+# WORLD_NAME must match the folder name under worlds_local.
+services:
+  valheim:
+    image: lloesche/valheim-server
+    container_name: valheim-webmap-test
+    cap_add: [SYS_NICE]
+    stop_grace_period: 2m
+    ports:
+      - "2456-2457:2456-2457/udp"
+      - "3000:3000/tcp"          # WebMap (server_port in the mod's config)
+    environment:
+      SERVER_NAME: "WebMap test"
+      WORLD_NAME: "Newworld"
+      SERVER_PASS: "testpass123"
+      SERVER_PUBLIC: "false"
+      BEPINEX: "true"
+      BACKUPS: "false"
+      UPDATE_CRON: ""
+      RESTART_CRON: ""
+      TZ: "America/New_York"
+    volumes:
+      - ../valheim-test/config:/config
+      - ../valheim-test/data:/opt/valheim
+      # lloesche keeps BepInEx under /opt/valheim/bepinex; /config/bepinex is only its config dir.
+      # Mounting the plugins dir keeps WebMap (and its map_data) outside the BepInEx install.
+      - ../valheim-test/plugins:/opt/valheim/bepinex/BepInEx/plugins

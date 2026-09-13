@@ -1,7 +1,7 @@
 {
     "name": "ValheimWebMap",
     "version_number": "1.0.0",
-    "website_url": "https://github.com/adrianvfx/valheim-webmap",
+    "website_url": "https://github.com/f00d4tehg0dz/valheim-webmap",
     "description": "Live web map for your dedicated server. 1 m/px tiles, 3D view with the game's own models, fog of war, players, bases, portals, stats. Clients need no mods.",
     "dependencies": [
         "denikson-BepInExPack_Valheim-5.4.2350"

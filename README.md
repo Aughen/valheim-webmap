@@ -239,6 +239,24 @@ Server" tool, or `-ValheimManaged <path>`. Linux/macOS: `./build.sh`.
 Output: `dist/ValheimWebMap-<version>.zip` and `dist/pkg/WebMap/`.
 `-Deploy <plugins dir>` or `--deploy` copies the plugin there.
 
+## Public demo site
+
+Want a demo people can click on without showing your real world? Run the
+mock server in Docker. Made-up island, fake players walking in circles,
+fake chat. No game files inside, nothing to leak, nothing it can write.
+
+```
+docker compose -f tools/docker-compose.demo.yml up -d --build
+```
+
+Port 3000. Put your reverse proxy or Cloudflare Tunnel in front on a demo
+hostname. Title and world name come from `WEBMAP_TITLE` and `WEBMAP_WORLD`
+in the compose file. Image is ~60 MB, uses under 100 MB RAM. Tiles are drawn
+on first request and cached; the demo loops forever.
+
+Your real map: keep it for your players. Cloudflare Access, a password on
+the proxy, or a hostname nobody guesses. The mod itself has no login.
+
 ## Try it without a real server
 
 `tools/mockserver.js` (Node, no packages): serves the web app with a made-up

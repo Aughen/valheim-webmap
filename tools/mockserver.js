@@ -82,6 +82,35 @@ function renderTile(layer, z, x, y) {
   return png(out, TILE, TILE, 3);
 }
 
+// tree and rock discs for the overlay layer, like the mod's tiles/veg
+const VEG_LOOK = { 1: [[86, 138, 58], 4.5], 2: [[44, 82, 52], 3.0], 3: [[56, 62, 40], 3.0], 4: [[74, 104, 112], 4.0], 5: [[70, 56, 46], 2.5], 6: [[70, 110, 50], 1.3], 7: [[118, 118, 112], 2.5], 8: [[134, 104, 74], 2.5], 9: [[96, 70, 44], 0.7], 10: [[90, 120, 60], 1.0], 11: [[60, 40, 34], 3.0] };
+function renderVegTile(z, x, y) {
+  const mpp = Math.pow(2, MAX_ZOOM - z), span = TILE * mpp;
+  const minX = -WORLD_HALF + x * span, maxZ = WORLD_HALF - y * span, minZ = maxZ - span;
+  const out = Buffer.alloc(TILE * TILE * 4);
+  const c0x = Math.floor((minX + WORLD_HALF) / 256), c1x = Math.floor((minX + span - 1 + WORLD_HALF) / 256);
+  const c0z = Math.floor((minZ + WORLD_HALF) / 256), c1z = Math.floor((maxZ - 1 + WORLD_HALF) / 256);
+  const blend = (px, py, col, a) => { if (px < 0 || py < 0 || px >= TILE || py >= TILE || a <= 0) return; const o = (py * TILE + px) * 4; const oa = out[o + 3] / 255, na = a + oa * (1 - a); if (na <= 0) return; const w = a / na; for (let k = 0; k < 3; k++) out[o + k] += (col[k] - out[o + k]) * w; out[o + 3] = Math.round(na * 255); };
+  for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) {
+    for (const p of vegPoints(cx, cz)) {
+      const look = VEG_LOOK[p.kind]; if (!look) continue;
+      const r = look[1] * p.size / mpp, cxp = (p.x - minX) / mpp - 0.5, cyp = (maxZ - p.z) / mpp - 0.5;
+      if (r < 0.75) { blend(Math.round(cxp), Math.round(cyp), look[0], Math.min(1, r * 1.1) * 0.85); continue; }
+      const sh = Math.min(r * 0.35, 3);
+      for (const [ox, oy, rr, col, alpha, hl] of [[sh, sh, r * 0.95, [0, 0, 0], 0.28, 0], [0, 0, r, look[0], 0.93, p.kind === 7 || p.kind === 8 ? 0.35 : 0.55]]) {
+        const x0 = Math.max(0, Math.floor(cxp + ox - rr)), x1 = Math.min(TILE - 1, Math.ceil(cxp + ox + rr)), y0 = Math.max(0, Math.floor(cyp + oy - rr)), y1 = Math.min(TILE - 1, Math.ceil(cyp + oy + rr));
+        for (let py = y0; py <= y1; py++) for (let px = x0; px <= x1; px++) {
+          const dx = px - cxp - ox, dy = py - cyp - oy, d2 = dx * dx + dy * dy; if (d2 > rr * rr) continue;
+          const d = Math.sqrt(d2) / rr, a = alpha * Math.min(1, (1 - d) * rr * 1.5);
+          const l = 1 + hl * (-(dx + dy) / (rr * 1.4142)) - 0.25 * d;
+          blend(px, py, hl ? col.map((v) => Math.max(0, Math.min(255, v * l))) : col, a);
+        }
+      }
+    }
+  }
+  return png(out, TILE, TILE, 4);
+}
+
 function png(pixels, w, h, ch) {
   const stride = w * ch, raw = Buffer.alloc((stride + 1) * h);
   for (let y = 0; y < h; y++) { raw[y * (stride + 1)] = 0; pixels.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride); }
@@ -124,7 +153,10 @@ function chunkJson(cx, cz) {
   const out = list.map((p) => { if (!idx.has(p[8])) { idx.set(p[8], names.length); names.push(p[8]); } return p.slice(0, 8).concat(idx.get(p[8])); });
   return JSON.stringify({ cx, cz, rev: 1, count: out.length, pieces: out, prefabs: names });
 }
-function vegBin(cx, cz) {
+const vegCache = new Map();
+function vegPoints(cx, cz) {
+  const k = `${cx}_${cz}`;
+  if (vegCache.has(k)) return vegCache.get(k);
   const minX = -WORLD_HALF + cx * 256, minZ = -WORLD_HALF + cz * 256;
   const pts = [];
   for (let i = 0; i < 600; i++) {
@@ -141,8 +173,14 @@ function vegBin(cx, cz) {
     else if (b === 4) kind = 7;
     if (!kind) continue;
     if (Math.hypot(x - 180, z - 120) < 90) continue;
-    pts.push([x, z, h, kind, 0.7 + hash(i, 9) * 0.8]);
+    pts.push({ x, z, h, kind, size: 0.7 + hash(i, 9) * 0.8 });
   }
+  vegCache.set(k, pts);
+  return pts;
+}
+function vegBin(cx, cz) {
+  const minX = -WORLD_HALF + cx * 256, minZ = -WORLD_HALF + cz * 256;
+  const pts = vegPoints(cx, cz).map((p) => [p.x, p.z, p.h, p.kind, p.size]);
   const b = Buffer.alloc(8 + pts.length * 8);
   b.write('VEG1', 0); b.writeUInt32LE(pts.length, 4);
   pts.forEach((p, i) => { const o = 8 + i * 8; b.writeInt16LE(Math.round((p[0] - minX) * 4), o); b.writeInt16LE(Math.round((p[1] - minZ) * 4), o + 2); b.writeInt16LE(Math.round(p[2] * 4), o + 4); b[o + 6] = p[3]; b[o + 7] = Math.round(p[4] * 32); });
@@ -294,7 +332,7 @@ const events = [{ id: 1, ts: new Date().toISOString(), type: 'server', name: 'Se
 const stats = () => ({ server: { startedUtc: new Date(Date.now() - 3.6e6).toISOString(), online: 2, day: 142, dayFraction: 0.4, night: false, exploredPercent: 6.3, structures: pieces.length, trees: 12831, rocks: 2200, terraformedZones: 12, objects: 481200, lastSweepUtc: new Date().toISOString(), lastSweepSeconds: 4.2, tiles: { onDisk: 512, queued: 3, rendered: 512, avgMs: 140, maxRenderZoom: 7 } },
   onlineHistory: Array.from({ length: 288 }, (_, i) => [Math.floor(Date.now() / 1000) - (288 - i) * 300, Math.round(2 + 2 * Math.sin(i / 20) + (i % 7 === 0 ? 1 : 0))]),
   players: [{ key: 'a', name: 'Ragnar', playtime: 54000, sessions: 31, deaths: 7, distance: 182000, portalTrips: 40, online: true, lastSeen: new Date().toISOString(), biomes: ['Meadows', 'Black Forest'] }, { key: 'b', name: 'Freya', playtime: 32000, sessions: 18, deaths: 2, distance: 91000, portalTrips: 12, online: true, lastSeen: new Date().toISOString(), biomes: ['Meadows'] }, { key: 'c', name: 'Olaf', playtime: 9000, sessions: 4, deaths: 9, distance: 12000, portalTrips: 1, online: false, lastSeen: new Date(Date.now() - 2 * 864e5).toISOString(), lastX: 300, lastZ: -200, biomes: ['Meadows'] }] });
-const config = { world_name: 'Mockheim', title: 'Mock server', version: '1.0.0-mock', texture_size: FOG, pixel_size: FPX, max_zoom: 7, world_size: 20480, world_start_pos: '0,40,0', water_level: WATER, enable_3d: true, explore_radius: 100, update_interval: 1 };
+const config = { world_name: process.env.WEBMAP_WORLD || 'Mockheim', title: process.env.WEBMAP_TITLE || 'Mock server', version: '1.0.0-mock', texture_size: FOG, pixel_size: FPX, max_zoom: 7, world_size: 20480, world_start_pos: '0,40,0', water_level: WATER, enable_3d: true, explore_radius: 100, update_interval: 1 };
 
 // ---------------------------------------------------------------- http
 const tileCache = new Map();
@@ -303,16 +341,17 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
   const send = (code, body, type, extra = {}) => { res.writeHead(code, Object.assign({ 'Content-Type': type, 'Cache-Control': 'no-cache' }, extra)); res.end(body); };
   let m;
-  if ((m = /^\/tiles\/(map|height)\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(p))) {
+  if ((m = /^\/tiles\/(map|height|veg)\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(p))) {
     const [, layer, z, x, y] = m;
     const key = `${layer}/${z}/${x}/${y}`;
+    if (layer === 'veg' && +z < 5) return send(404, 'no overlay below zoom 5', 'text/plain');
     if (+z > 5) {   // pretend close-zoom tiles only exist where explored
       const mpp = Math.pow(2, 7 - z), span = TILE * mpp, minX = -WORLD_HALF + x * span, maxZ = WORLD_HALF - y * span;
       let any = false;
       for (let j = 0; j < 4 && !any; j++) for (let i = 0; i < 4 && !any; i++) if (explored(minX + (i + .5) * span / 4, maxZ - (j + .5) * span / 4)) any = true;
       if (!any) return send(404, 'pending', 'text/plain', { 'X-WebMap-Tile': 'pending' });
     }
-    if (!tileCache.has(key)) tileCache.set(key, renderTile(layer, +z, +x, +y));
+    if (!tileCache.has(key)) { if (tileCache.size > 4000) tileCache.clear(); tileCache.set(key, layer === 'veg' ? renderVegTile(+z, +x, +y) : renderTile(layer, +z, +x, +y)); }
     return send(200, tileCache.get(key), 'image/png');
   }
   if (p === '/config') return send(200, JSON.stringify(config), 'application/json');
@@ -366,8 +405,11 @@ function broadcast(obj) { const s = JSON.stringify(obj); for (const c of clients
 setInterval(() => {
   t += 1;
   players[0].x = +(200 + Math.sin(t / 20) * 60).toFixed(1); players[0].z = +(140 + Math.cos(t / 20) * 40).toFixed(1); players[0].yaw = (t * 9) % 360;
-  players[1].x = +(640 + t * 1.5).toFixed(1); players[1].z = +(320 + Math.sin(t / 10) * 20).toFixed(1); players[1].health = 40 + (t % 50);
+  // Freya walks a loop so a long-running demo never wanders off the map
+  const lap = t % 1200, ang = lap / 1200 * Math.PI * 2;
+  players[1].x = +(640 + Math.cos(ang) * 420).toFixed(1); players[1].z = +(320 + Math.sin(ang) * 260).toFixed(1); players[1].yaw = Math.round((90 - ang * 180 / Math.PI + 360) % 360); players[1].health = 40 + (t % 50);
   reveal(players[1].x, players[1].z, 100);
+  if (events.length > 200) events.splice(0, events.length - 200);
   broadcast({ t: 'players', data: { count: players.length, players } });
   if (t % 15 === 0) { const e = { id: 100 + t, ts: new Date().toISOString(), type: t % 30 ? 'chat' : 'death', name: 'Freya', text: t % 30 ? 'anyone seen my karve?' : 'died', x: players[1].x, z: players[1].z }; events.push(e); broadcast({ t: 'events', data: [e] }); }
   if (t % 25 === 0) broadcast({ t: 'ping', id: 1, name: 'Ragnar', x: players[0].x + 50, z: players[0].z - 30 });

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1
+## 2.0.0
 
 * Export any area as a 3D scene: glTF (instanced, or one node per object)
   or an Unreal pack with a 16-bit heightmap, CSVs in Unreal units and an
@@ -9,6 +9,11 @@
   stamina, eitr, equipped gear, state and lifetime stats. Server publishes
   stamina, eitr and gear per player.
 * Stats table fits the sidebar.
+
+## 1.0.1
+
+ * Namespace change
+ * Plugin approvals
 
 ## 1.0.0
 

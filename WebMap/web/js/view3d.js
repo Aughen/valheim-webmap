@@ -108,6 +108,22 @@ export class View3D {
     objectFilter.onChange(() => { for (const k of this.objChunks.keys()) this.dropObjects(k); this.scheduleUpdate(); });
     markerStore.onChange(() => this.rebuildMarkers());
     window.addEventListener('resize', () => this.resize());
+    // a click (not a drag) on a player's figure reports it
+    this.raycaster = new THREE.Raycaster();
+    let down = null;
+    canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+    canvas.addEventListener('pointerup', (e) => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) { down = null; return; }
+      down = null;
+      if (!this.onPlayerClick || this.players.size === 0) return;
+      const r = canvas.getBoundingClientRect();
+      const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      this.raycaster.setFromCamera(ndc, this.camera);
+      const bodies = [];
+      for (const [id, en] of this.players) for (const m of en.group.children) { m.userData.playerId = id; bodies.push(m); }   // figure and name label
+      const hit = this.raycaster.intersectObjects(bodies, false)[0];
+      if (hit) this.onPlayerClick(hit.object.userData.playerId, e.clientX, e.clientY);
+    });
   }
 
   // ---------------------------------------------------------------- lifecycle

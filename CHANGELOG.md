@@ -5,6 +5,9 @@
 * Export any area as a 3D scene: glTF (instanced, or one node per object)
   or an Unreal pack with a 16-bit heightmap, CSVs in Unreal units and an
   editor script. Built in the browser; fog applies.
+* Player card: click a player on the map, in 3D or in the sidebar for health,
+  stamina, eitr, equipped gear, state and lifetime stats. Server publishes
+  stamina, eitr and gear per player.
 * Stats table fits the sidebar.
 
 ## 1.0.0

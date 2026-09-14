@@ -39,7 +39,7 @@ export class PlayersLayer {
       if (!mk) {
         mk = L.marker(ll, { icon: this.icon(p), zIndexOffset: 1000, keyboard: false });
         mk.bindTooltip('', { direction: 'top', offset: [0, -14] });
-        mk.on('click', () => this.follow(p.id === this.following ? null : p.id));
+        mk.on('click', (e) => { const q = this.players.find((r) => r.id === p.id) || p; const oe = e.originalEvent; if (this.onClick) this.onClick(q, oe ? oe.clientX : 0, oe ? oe.clientY : 0); });
         this.markers.set(p.id, mk);
         this.group.addLayer(mk);
       } else {

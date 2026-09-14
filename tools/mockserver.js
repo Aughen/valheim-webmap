@@ -288,7 +288,7 @@ const markers = { rev: 1, sets: [
   { id: 'vehicles', label: 'Boats & carts', markers: [{ x: 240, z: -620, cat: 'boat', icon: 'boat', label: 'Karve' }] },
 ] };
 
-const players = [{ id: 1, name: 'Ragnar', health: 88, maxHealth: 120, x: 200, z: 140, y: 42, yaw: 40, biome: 'Meadows' }, { id: 2, name: 'Freya', health: 40, maxHealth: 95, x: 640, z: 320, y: 40, yaw: 200, biome: 'Black Forest' }, { id: 3, name: 'Hidden', health: 50, maxHealth: 50, hidden: true }];
+const players = [{ id: 1, name: 'Ragnar', health: 88, maxHealth: 120, stamina: 63, eitr: 0, gear: { right: 'AxeBronze', left: 'ShieldWood', chest: 'ArmorBronzeChest', helmet: 'HelmetBronze', legs: 'ArmorBronzeLegs', shoulder: 'CapeDeerHide' }, x: 200, z: 140, y: 42, yaw: 40, biome: 'Meadows' }, { id: 2, name: 'Freya', health: 40, maxHealth: 95, x: 640, z: 320, y: 40, yaw: 200, biome: 'Black Forest' }, { id: 3, name: 'Hidden', health: 50, maxHealth: 50, hidden: true }];
 let t = 0;
 const events = [{ id: 1, ts: new Date().toISOString(), type: 'server', name: 'Server', text: 'online' }, { id: 2, ts: new Date().toISOString(), type: 'join', name: 'Ragnar', text: 'joined the server' }];
 const stats = () => ({ server: { startedUtc: new Date(Date.now() - 3.6e6).toISOString(), online: 2, day: 142, dayFraction: 0.4, night: false, exploredPercent: 6.3, structures: pieces.length, trees: 12831, rocks: 2200, terraformedZones: 12, objects: 481200, lastSweepUtc: new Date().toISOString(), lastSweepSeconds: 4.2, tiles: { onDisk: 512, queued: 3, rendered: 512, avgMs: 140, maxRenderZoom: 7 } },

@@ -20,7 +20,8 @@ Server-side mod. Publishes live web map of your Valheim world. Share
 * **Fog of war.** Unexplored ground is black. No toggle. Close-zoom tiles
   render only where players walked.
 * **Live players.** Facing, health, biome, PvP and sleep state, follow mode,
-  pings, chat pins.
+  pings, chat pins. Click a player: card with health, stamina, eitr, gear,
+  lifetime stats, in 2D and 3D.
 * **Markers.** Portals with tags and links, tombstones, player bases,
   boats, carts, your own `markers.json`. World locations (bosses, dungeons,
   traders) never published. World seed never published. No spoilers.

@@ -5,6 +5,7 @@ import { ValheimCRS, worldBounds, toLatLng, fromLatLng, MAX_ZOOM, OVER_ZOOM, TIL
 import { connect, on, state, getJSON } from './net.js';
 import { FallbackTileLayer } from './layers/tiles.js';
 import { Exporter } from './export.js';
+import { PlayerCard } from './playercard.js';
 import { FogLayer } from './layers/fog.js';
 import { StructuresLayer } from './layers/structures.js';
 import { MarkerLayers, escape } from './layers/markers.js';
@@ -80,6 +81,9 @@ class App {
     $('#btn-menu').addEventListener('click', () => this.toggleSidebar());
     $('#btn-home').addEventListener('click', () => this.goToSpawn(true));
     $('#btn-mode').addEventListener('click', () => this.setMode(this.mode === '2d' ? '3d' : '2d'));
+    this.playerCard = new PlayerCard(this);
+    this.layers.players.onClick = (p, x, y) => this.playerCard.show(p, x, y);
+    this.layers.players.onChange((list) => this.playerCard.update(list));
     $('#btn-export').addEventListener('click', () => this.openExport());
     $('#export-close').addEventListener('click', () => { $('#export-dialog').hidden = true; });
     $('#export-dialog').addEventListener('click', (e) => { if (e.target.id === 'export-dialog') e.target.hidden = true; });
@@ -231,6 +235,7 @@ class App {
     this.view3d.setPlayers(this.layers.players.players);
     this.view3d.setPins(this.layers.markers.pinList());
     this.layers.markers.onPins((pins) => this.view3d.setPins(pins));
+    this.view3d.onPlayerClick = (id, x, y) => { const p = this.layers.players.players.find((q) => q.id === id); if (p) this.playerCard.show(p, x, y); };
     return this.view3d;
   }
 

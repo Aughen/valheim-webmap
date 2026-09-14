@@ -20,8 +20,9 @@ namespace WebMap.Live
         public struct Snapshot
         {
             public long id; public string key, name, biome;
-            public float x, y, z, yaw, health, maxHealth;
+            public float x, y, z, yaw, health, maxHealth, stamina, eitr;
             public bool hasPos, tracked, hidden, dead, pvp, inBed;
+            public string[] gear;   // right, left, chest, helmet, legs, shoulder, utility (prefab names, "" when empty)
         }
 
         private static readonly List<Snapshot> current = new List<Snapshot>();
@@ -32,6 +33,26 @@ namespace WebMap.Live
         private static readonly int hashDead = "dead".GetStableHashCode();
         private static readonly int hashHealth = "health".GetStableHashCode();
         private static readonly int hashMaxHealth = "max_health".GetStableHashCode();
+        private static readonly int hashStamina = "stamina".GetStableHashCode();
+        private static readonly int hashEitr = "eitr".GetStableHashCode();
+        // what the player has equipped, as the visual-equipment sync stores it: item name hashes
+        private static readonly int[] hashGear = { "RightItem".GetStableHashCode(), "LeftItem".GetStableHashCode(), "ChestItem".GetStableHashCode(), "HelmetItem".GetStableHashCode(), "LegItem".GetStableHashCode(), "ShoulderItem".GetStableHashCode(), "UtilityItem".GetStableHashCode() };
+        public static readonly string[] GearSlots = { "right", "left", "chest", "helmet", "legs", "shoulder", "utility" };
+        private static Dictionary<int, string> itemNames;
+
+        // item name hash -> prefab name, from the object database (built once, lazily)
+        private static string ItemName(int hash)
+        {
+            if (hash == 0) return "";
+            if (itemNames == null)
+            {
+                var d = new Dictionary<int, string>();
+                try { foreach (var go in ObjectDB.instance.m_items) if (go != null) d[go.name.GetStableHashCode()] = go.name; } catch { }
+                if (d.Count == 0) return "";
+                itemNames = d;
+            }
+            return itemNames.TryGetValue(hash, out string n) ? n : "";
+        }
 
         public static string Json => json;
         public static List<Snapshot> Current => current;
@@ -67,6 +88,10 @@ namespace WebMap.Live
                     s.maxHealth = Mathf.Ceil(zdo.GetFloat(hashMaxHealth, 25f));
                     s.health = Mathf.Ceil(zdo.GetFloat(hashHealth, s.maxHealth));
                     if (s.maxHealth < s.health) s.maxHealth = s.health;
+                    s.stamina = zdo.GetFloat(hashStamina, -1f);
+                    s.eitr = zdo.GetFloat(hashEitr, -1f);
+                    s.gear = new string[hashGear.Length];
+                    for (int g = 0; g < hashGear.Length; g++) { try { s.gear[g] = ItemName(zdo.GetInt(hashGear[g], 0)); } catch { s.gear[g] = ""; } }
                     s.dead = zdo.GetBool(hashDead, false);
                     s.pvp = zdo.GetBool(hashPvp, false);
                     s.inBed = zdo.GetBool(hashInBed, false);
@@ -98,6 +123,14 @@ namespace WebMap.Live
                 j.BeginObject();
                 j.Prop("id", s.id).Prop("name", s.name);
                 j.Prop("health", (int)s.health).Prop("maxHealth", (int)s.maxHealth);
+                if (s.stamina >= 0f) j.Prop("stamina", (int)s.stamina);
+                if (s.eitr >= 0f) j.Prop("eitr", (int)s.eitr);
+                if (s.gear != null)
+                {
+                    j.Key("gear").BeginObject();
+                    for (int g = 0; g < s.gear.Length; g++) if (!string.IsNullOrEmpty(s.gear[g])) j.Prop(GearSlots[g], s.gear[g]);
+                    j.End();
+                }
                 j.Prop("dead", s.dead).Prop("pvp", s.pvp).Prop("inBed", s.inBed).Prop("hidden", s.hidden);
                 if (s.hasPos)
                 {

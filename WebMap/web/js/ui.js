@@ -128,7 +128,7 @@ export class Sidebar {
           <div class="hp"><i class="${hp < 30 ? 'low' : ''}" style="width:${hp}%"></i></div></div>
         <button class="btn small ${PL.following === pl.id ? 'on' : ''}" ${pl.x === undefined ? 'disabled' : ''}>${PL.following === pl.id ? 'Unfollow' : 'Follow'}</button></div>`);
       r.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); PL.follow(PL.following === pl.id ? null : pl.id); });
-      r.addEventListener('click', () => { if (pl.x !== undefined) this.app.goTo(pl.x, pl.z, 6); });
+      r.addEventListener('click', (e) => { const rect = r.getBoundingClientRect(); this.app.playerCard.show(pl, rect.right, rect.top + rect.height / 2); });
       p.append(r);
     }
     $('#online-pill').textContent = `${players.length} online`;

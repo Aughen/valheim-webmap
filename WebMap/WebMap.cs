@@ -21,7 +21,7 @@ namespace WebMap
     {
         public const string GUID = "com.valheimwebmap.server";
         public const string NAME = "WebMap";
-        public const string VERSION = "1.0.0";
+        public const string VERSION = "1.0.1";
 
         private static readonly string[] ALLOWED_PINS = { "dot", "fire", "mine", "house", "cave" };
 

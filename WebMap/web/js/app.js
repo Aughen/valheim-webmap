@@ -4,6 +4,7 @@
 import { ValheimCRS, worldBounds, toLatLng, fromLatLng, MAX_ZOOM, OVER_ZOOM, TILE, WORLD_HALF, metersPerPixel } from './crs.js';
 import { connect, on, state, getJSON } from './net.js';
 import { FallbackTileLayer } from './layers/tiles.js';
+import { Exporter } from './export.js';
 import { FogLayer } from './layers/fog.js';
 import { StructuresLayer } from './layers/structures.js';
 import { MarkerLayers, escape } from './layers/markers.js';
@@ -79,6 +80,10 @@ class App {
     $('#btn-menu').addEventListener('click', () => this.toggleSidebar());
     $('#btn-home').addEventListener('click', () => this.goToSpawn(true));
     $('#btn-mode').addEventListener('click', () => this.setMode(this.mode === '2d' ? '3d' : '2d'));
+    $('#btn-export').addEventListener('click', () => this.openExport());
+    $('#export-close').addEventListener('click', () => { $('#export-dialog').hidden = true; });
+    $('#export-dialog').addEventListener('click', (e) => { if (e.target.id === 'export-dialog') e.target.hidden = true; });
+    $('#export-form').addEventListener('submit', (e) => { e.preventDefault(); this.runExport(); });
     $('#btn-fullscreen').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); });
     $('#btn-link').addEventListener('click', async () => {
       this.updateHash();
@@ -219,19 +224,23 @@ class App {
   }
 
   // ---------------------------------------------------------------- 3D
+  async ensureView3D() {
+    if (this.view3d) return this.view3d;
+    const { View3D } = await import('./view3d.js');
+    this.view3d = new View3D($('#gl'), this.config);
+    this.view3d.setPlayers(this.layers.players.players);
+    this.view3d.setPins(this.layers.markers.pinList());
+    this.layers.markers.onPins((pins) => this.view3d.setPins(pins));
+    return this.view3d;
+  }
+
   async setMode(mode) {
     if (mode === this.mode) return;
     const btn = $('#btn-mode');
     if (mode === '3d') {
       btn.disabled = true;
       try {
-        if (!this.view3d) {
-          const { View3D } = await import('./view3d.js');
-          this.view3d = new View3D($('#gl'), this.config);
-          this.view3d.setPlayers(this.layers.players.players);
-          this.view3d.setPins(this.layers.markers.pinList());
-          this.layers.markers.onPins((pins) => this.view3d.setPins(pins));
-        }
+        await this.ensureView3D();
         const c = fromLatLng(this.map.getCenter());
         $('#view3d').hidden = false;
         $('#map').style.visibility = 'hidden';
@@ -258,6 +267,48 @@ class App {
       this.map.invalidateSize();
     }
     this.updateHash();
+  }
+
+  // ---------------------------------------------------------------- export
+  openExport() {
+    const d = $('#export-dialog');
+    const area = d.querySelector('select[name=area]');
+    area.querySelector('option[value=view]').disabled = this.mode !== '2d';
+    if (this.mode !== '2d' && area.value === 'view') area.value = '512';
+    $('#export-status').textContent = '';
+    d.hidden = false;
+  }
+
+  async runExport() {
+    const form = $('#export-form'), status = $('#export-status'), go = $('#export-go');
+    const f = new FormData(form);
+    let x0, z0, x1, z1;
+    const c = this.mode === '3d' && this.view3d ? this.view3d.center() : fromLatLng(this.map.getCenter());
+    if (f.get('area') === 'view') {
+      const b = this.map.getBounds();
+      const sw = fromLatLng(b.getSouthWest()), ne = fromLatLng(b.getNorthEast());
+      x0 = sw.x; z0 = sw.z; x1 = ne.x; z1 = ne.z;
+    } else {
+      const half = +f.get('area') / 2;
+      x0 = c.x - half; z0 = c.z - half; x1 = c.x + half; z1 = c.z + half;
+    }
+    const opts = { x0, z0, x1, z1, step: +f.get('step'), cats: new Set(f.getAll('cat')), water: f.get('water') === 'on', markers: f.get('markers') === 'on', trees: true, mode: f.get('mode') };
+    go.disabled = true;
+    try { await this.ensureView3D(); } catch (e) { status.textContent = '3D could not start: ' + e.message; go.disabled = false; return; }
+    const ex = new Exporter(this);
+    ex.report = (msg) => { status.textContent = msg; };
+    try {
+      const out = await ex.run(opts);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(out.blob); a.download = out.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      status.textContent = `${out.name} · ${(out.blob.size / 1048576).toFixed(1)} MB · ${out.meta.objects} objects`;
+      this.toast('Export ready: ' + out.name);
+    } catch (e) {
+      status.textContent = e.message || String(e);
+      console.warn('export', e);
+    } finally { go.disabled = false; }
   }
 
   toast(msg) {

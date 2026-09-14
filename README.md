@@ -28,6 +28,9 @@ Server-side mod. Publishes live web map of your Valheim world. Share
   trips, biomes. Per server: day, explored %, pieces, trees, online history.
 * **Event feed.** Joins, leaves, deaths, chat, pings. Logged to
   `events.jsonl`.
+* **Export.** Any area as a 3D scene: terrain, water, every building and
+  object, tree crowns, markers. One `.glb` for Blender, Godot, Unity, three.js,
+  or an Unreal pack with a 16-bit heightmap. See [docs/EXPORT.md](docs/EXPORT.md).
 * Permalinks, search, mobile layout, dark UI, Discord webhook,
   `POST /announce`.
 
@@ -150,6 +153,24 @@ Put `markers.json` beside world map data
 ```
 
 Icons: `pin dot fire mine house cave boss trader dungeon camp village ruin runestone wreck portal tombstone boat cart poi spawn`.
+
+### Export a 3D scene
+
+Download button in the top bar. Pick the area (visible map, or 256 m to
+1.5 km around the centre), terrain detail, what to include, format:
+
+* **glTF, instanced.** One node per prefab, `EXT_mesh_gpu_instancing`.
+  Small file. Blender, Godot, three.js.
+* **glTF, one node per object.** Unreal, Unity, anything without the
+  extension. Bigger file, same content.
+* **Unreal pack.** Zip: the flat scene, `heightmap_r16.png` for a Landscape,
+  `instances.csv` and `markers.csv` in Unreal units, an editor Python
+  script, README with the Landscape scale and location numbers.
+
+Built in the browser from what the map already shows, so fog applies:
+nothing undiscovered leaves the server. Meshes and textures are the game's
+own assets from your server. Use the file yourself, do not redistribute it.
+Full steps per editor in [docs/EXPORT.md](docs/EXPORT.md).
 
 ## HTTP API
 

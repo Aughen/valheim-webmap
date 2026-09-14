@@ -24,6 +24,8 @@ First release.
 * Markers: portals with tags and links, tombstones,
   player bases (clusters of built pieces), boats, carts, custom
   `markers.json` sets.
+* Export any area as a 3D scene: glTF (instanced or flat) or an Unreal pack
+  with a 16-bit heightmap, CSVs and an editor script. Browser-side.
 * Layer toggles drive 2D and 3D: buildings with opacity, players, chat pins,
   trees and rocks overlay (2D),
   labels, 256 m grid, marker sets, object categories.

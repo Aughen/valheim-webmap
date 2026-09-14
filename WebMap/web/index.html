@@ -29,6 +29,7 @@
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.4 5 12.6 12.6-1.4 1.4L5 6.4 6.4 5Zm12.6 1.4L6.4 19 5 17.6 17.6 5 19 6.4Z"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><path d="M10 4a6 6 0 1 0 3.7 10.7l5 5 1.4-1.4-5-5A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/></symbol>
     <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6V3h2ZM4 19h16v2H4v-2Z"/></symbol>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="m12 3 9 8h-3v9h-4v-6h-4v6H6v-9H3l9-8Z"/></symbol>
   </defs>
 </svg>
@@ -51,6 +52,7 @@
       <span id="online-pill" class="pill" title="Players online">0 online</span>
       <button class="icon-btn" id="btn-home" title="Go to spawn"><svg><use href="#i-home"/></svg></button>
       <button class="icon-btn" id="btn-link" title="Copy link to this view"><svg><use href="#i-link"/></svg></button>
+      <button class="icon-btn" id="btn-export" title="Export area as 3D scene"><svg><use href="#i-export"/></svg></button>
       <button class="icon-btn" id="btn-fullscreen" title="Fullscreen"><svg><use href="#i-fullscreen"/></svg></button>
       <button class="mode-btn" id="btn-mode" title="Switch to 3D"><svg><use href="#i-3d"/></svg><span>3D</span></button>
     </div>
@@ -78,6 +80,41 @@
     <div id="render-status" class="render-status" title="Tiles on disk / waiting to render"></div>
   </div>
   <div id="toast" class="toast" hidden></div>
+  <div id="export-dialog" class="dialog" hidden>
+    <div class="dialog-box">
+      <div class="dialog-head"><strong>Export 3D scene</strong><button class="icon-btn" id="export-close" title="Close"><svg><use href="#i-close"/></svg></button></div>
+      <form id="export-form">
+        <label class="field"><span>Area</span>
+          <select name="area">
+            <option value="view">Visible map (2D view)</option>
+            <option value="256">256 m around the centre</option>
+            <option value="512" selected>512 m around the centre</option>
+            <option value="1024">1 km around the centre</option>
+            <option value="1536">1.5 km around the centre</option>
+          </select></label>
+        <label class="field"><span>Terrain detail</span>
+          <select name="step"><option value="1">1 m (heavy)</option><option value="2" selected>2 m</option><option value="4">4 m</option></select></label>
+        <div class="field"><span>Include</span>
+          <div class="checks">
+            <label><input type="checkbox" name="cat" value="piece" checked> Buildings</label>
+            <label><input type="checkbox" name="cat" value="other" checked> Ruins &amp; objects</label>
+            <label><input type="checkbox" name="cat" value="rock" checked> Rocks</label>
+            <label><input type="checkbox" name="cat" value="bush" checked> Bushes</label>
+            <label><input type="checkbox" name="cat" value="tree" checked> Trees</label>
+            <label><input type="checkbox" name="water" checked> Water</label>
+            <label><input type="checkbox" name="markers" checked> Markers</label>
+          </div></div>
+        <label class="field"><span>Format</span>
+          <select name="mode">
+            <option value="instanced">glTF scene (.glb), instanced — Blender, Godot, three.js</option>
+            <option value="flat">glTF scene (.glb), one node per object — Unreal, Unity</option>
+            <option value="unreal">Unreal pack (.zip): scene + 16-bit heightmap + CSV + script</option>
+          </select></label>
+        <p class="hint">Only explored ground and published objects are exported. Meshes and textures are the game's own assets from this server; keep the file for your own use.</p>
+        <div class="dialog-actions"><span id="export-status" class="meta"></span><button type="submit" class="mode-btn" id="export-go">Export</button></div>
+      </form>
+    </div>
+  </div>
   <div id="conn" class="conn" hidden>Reconnecting…</div>
 </div>
 

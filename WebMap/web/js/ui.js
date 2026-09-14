@@ -16,7 +16,7 @@ export function fmtDuration(sec) {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
-export function fmtDist(m) { return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`; }
+export function fmtDist(m) { return m >= 10000 ? `${Math.round(m / 1000)} km` : m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`; }
 export function fmtAgo(iso) {
   if (!iso) return '';
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -178,8 +178,8 @@ export class Sidebar {
     p.append(el('<h3>Players</h3>'));
     const rows = (d.players || []).map((pl) => `<tr class="${pl.online ? 'on' : ''}" data-x="${pl.lastX ?? ''}" data-z="${pl.lastZ ?? ''}">
       <td>${escape(pl.name)}</td><td class="num">${fmtDuration(pl.playtime)}</td><td class="num">${pl.deaths}</td>
-      <td class="num">${fmtDist(pl.distance)}</td><td class="num">${pl.sessions}</td><td class="num" title="${escape(pl.lastSeen)}">${pl.online ? 'now' : fmtAgo(pl.lastSeen)}</td></tr>`).join('');
-    const table = el(`<div style="overflow:auto"><table class="stats"><thead><tr><th>Name</th><th class="num">Played</th><th class="num">Deaths</th><th class="num">Walked</th><th class="num">Visits</th><th class="num">Seen</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+      <td class="num">${fmtDist(pl.distance)}</td><td class="num">${pl.sessions}</td><td class="num" title="${escape(pl.lastSeen)}">${pl.online ? 'now' : fmtAgo(pl.lastSeen).replace(' ago', '').replace('just now', 'now')}</td></tr>`).join('');
+    const table = el(`<div style="overflow:auto"><table class="stats"><thead><tr><th>Name</th><th class="num" title="Play time">Played</th><th class="num" title="Deaths">Died</th><th class="num" title="Distance walked">Walked</th><th class="num" title="Sessions">Visits</th><th class="num" title="Last seen">Seen</th></tr></thead><tbody>${rows}</tbody></table></div>`);
     for (const tr of table.querySelectorAll('tbody tr')) {
       if (tr.dataset.x) { tr.style.cursor = 'pointer'; tr.addEventListener('click', () => this.app.goTo(+tr.dataset.x, +tr.dataset.z, 6)); }
     }

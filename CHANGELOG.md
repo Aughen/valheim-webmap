@@ -1,20 +1,26 @@
 # Changelog
 
+## 1.1.0
+
+* Old trips count. Fog lifts everywhere players have already been, even from
+  before the mod was installed. The world save lists every zone the game
+  built, and it only builds them near a player. Runs at start and once a
+  minute. `reveal_visited` (on) and `reveal_visited_margin` (3 zones, about
+  150 m from where they walked).
+* Player card. Click a player on the map, in 3D or in the list: health,
+  stamina, eitr, what they wear and hold, state, lifetime stats. Updates live.
+  Server now sends stamina, eitr and gear.
+* Export. Pick an area, get a 3D scene: glTF (instanced, or one node per
+  object) or an Unreal pack with a 16-bit heightmap, CSVs in Unreal units
+  and an editor script. Made in the browser. Fog applies.
+* Demo site. `tools/Dockerfile.demo` and `docker-compose.demo.yml` run the
+  mock server as a public demo. Mock draws the tree and rock overlay and
+  loops forever.
+* Stats table fits the sidebar. README in plain words.
+
 ## 1.0.1
 
-* Fog lifts where players have already been, even from before the mod was
-  installed: the world save's generated zones, eroded by `reveal_visited_margin`.
-  On at start and once a minute. `reveal_visited = false` turns it off.
-
-* Export any area as a 3D scene: glTF (instanced, or one node per object)
-  or an Unreal pack with a 16-bit heightmap, CSVs in Unreal units and an
-  editor script. Built in the browser; fog applies.
-* Player card: click a player on the map, in 3D or in the sidebar for health,
-  stamina, eitr, equipped gear, state and lifetime stats. Server publishes
-  stamina, eitr and gear per player.
-* Stats table fits the sidebar.
-* Demo site: `tools/Dockerfile.demo` and `docker-compose.demo.yml` run the
-  mock server publicly. Mock now serves the tree/rock overlay and loops.
+First public release. Same as 1.0.0 plus README and screenshot fixes.
 
 ## 1.0.0
 

@@ -22,7 +22,9 @@ browser. Share `http://your_ip:3000`. Players install nothing. Server only.
 * **Old trips count.** Install the mod on a world you played for months and
   the map still opens up everywhere anyone has been. The world save remembers
   which zones the game built, and it only builds them where someone stood.
-  The mod lifts the fog there at start. See `reveal_visited`.
+  The mod lifts the fog there at start. Your in-game map itself lives in
+  your character file, which the server never sees, so this is the closest
+  thing to it. See `reveal_visited`.
 * **Live players.** Arrow points where they look. Health bar. Biome. PvP,
   sleeping, dead. Follow one. Pings and chat pins land on the map.
 * **Player card.** Click a player, on the map, in 3D, or in the list. Card

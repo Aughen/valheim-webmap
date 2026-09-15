@@ -19,6 +19,10 @@ browser. Share `http://your_ip:3000`. Players install nothing. Server only.
   close, no seams, no grid. Base looks like your base.
 * **Fog of war.** Ground nobody walked on is black. No switch to turn it off.
   Close-up tiles only draw where players walked.
+* **Old trips count.** Install the mod on a world you played for months and
+  the map still opens up everywhere anyone has been. The world save remembers
+  which zones the game built, and it only builds them where someone stood.
+  The mod lifts the fog there at start. See `reveal_visited`.
 * **Live players.** Arrow points where they look. Health bar. Biome. PvP,
   sleeping, dead. Follow one. Pings and chat pins land on the map.
 * **Player card.** Click a player, on the map, in 3D, or in the list. Card
@@ -144,6 +148,8 @@ cuts that by four.
 | Models | `texture_max_size` | 512 | longest texture edge |
 | Models | `export_ms_per_frame` | 6 | game-thread ms per frame for export |
 | Texture | `explore_radius` | 100 | metres revealed around a player |
+| Texture | `reveal_visited` | true | lift fog everywhere the world save shows players have been, even before the mod |
+| Texture | `reveal_visited_margin` | 3 | how far in from the edge of the built zones the reveal stops (0 = 320 m, 3 = 150 m, 4 = 100 m) |
 | Discord | `discord_webhook`, `discord_invite_url` | | webhook for events |
 | Server | `webmap_url`, `max_pins_per_user` | | link shown in game, pin limit |
 
@@ -274,10 +280,11 @@ docker compose -f tools\docker-compose.test.yml up      # first run downloads se
 
 Then <http://localhost:3000>. In game: Join by IP, `127.0.0.1:2456`
 
-A copied world starts with no fog lifted. Exploring lives in player files,
-not the world. Map stays black until someone walks. For tests set
-`reveal_all = true` in `valheim-test\config\bepinex\com.valheimwebmap.server.cfg`
-and restart: no fog, whole world. Tiles still draw as you look.
+A copied world lifts the fog where players have been (`reveal_visited`), not
+what each player's in-game map shows: that lives in their character file.
+Want it all: set `reveal_all = true` in
+`valheim-test\config\bepinex\com.valheimwebmap.server.cfg` and restart. Tiles
+still draw as you look.
 
 ## Licence
 

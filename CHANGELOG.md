@@ -2,6 +2,10 @@
 
 ## 1.0.1
 
+* Fog lifts where players have already been, even from before the mod was
+  installed: the world save's generated zones, eroded by `reveal_visited_margin`.
+  On at start and once a minute. `reveal_visited = false` turns it off.
+
 * Export any area as a 3D scene: glTF (instanced, or one node per object)
   or an Unreal pack with a 16-bit heightmap, CSVs in Unreal units and an
   editor script. Built in the browser; fog applies.

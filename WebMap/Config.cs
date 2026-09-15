@@ -12,6 +12,8 @@ namespace WebMap
         public static int TEXTURE_SIZE = 2048;
         public static int PIXEL_SIZE = 12;
         public static float EXPLORE_RADIUS = 100f;
+        public static bool REVEAL_VISITED = true;
+        public static int REVEAL_VISITED_MARGIN = 3;
         public static float UPDATE_FOG_TEXTURE_INTERVAL = 2f;
         public static float SAVE_FOG_TEXTURE_INTERVAL = 30f;
         public static int MAX_PINS_PER_USER = 50;
@@ -78,6 +80,22 @@ namespace WebMap
             EXPLORE_RADIUS = config.Bind<float>("Texture", "explore_radius",
                 WebMapConfig.EXPLORE_RADIUS,
                 "A larger explore_radius reveals the map more quickly.").Value;
+
+            REVEAL_VISITED = config.Bind("Texture", "reveal_visited",
+                WebMapConfig.REVEAL_VISITED,
+                "Lift the fog everywhere players have already been, including before the mod was installed. "
+                + "The world save remembers which 64 m zones the game generated; those only exist where someone "
+                + "stood nearby. The in-game map itself lives in each player's character file, which the server "
+                + "never sees, so this is the closest thing to it. Runs at start and after each world walk.").Value;
+
+            REVEAL_VISITED_MARGIN = config.Bind("Texture", "reveal_visited_margin",
+                WebMapConfig.REVEAL_VISITED_MARGIN,
+                new BepInEx.Configuration.ConfigDescription(
+                "The game generates zones up to 5 away from a player. A zone only counts as visited when every "
+                + "zone within this many of it was generated too, so the edge of the reveal sits near where "
+                + "players actually saw. 3 = about 150 m from the path, 4 = about 100 m (the in-game radius), "
+                + "0 = the whole generated area (about 320 m).",
+                new BepInEx.Configuration.AcceptableValueRange<int>(0, 5))).Value;
 
             UPDATE_FOG_TEXTURE_INTERVAL = config.Bind<float>("Interval", "update_fog_texture_interval",
                 WebMapConfig.UPDATE_FOG_TEXTURE_INTERVAL,

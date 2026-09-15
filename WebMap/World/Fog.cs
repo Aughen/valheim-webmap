@@ -128,6 +128,36 @@ namespace WebMap.World
             return revealed;
         }
 
+        // Zones the game has generated only exist where a player (or their ship) came within a few
+        // zones, so the saved list is a record of everywhere anyone has been, including long before
+        // this mod was installed. Reveal them, eroded by a margin so the edge lands near what the
+        // players actually saw. Each zone is handled once per server run. Main thread.
+        private static readonly System.Collections.Generic.HashSet<Vector2i> visitedDone = new System.Collections.Generic.HashSet<Vector2i>();
+        public static int RevealVisitedZones()
+        {
+            if (!WebMapConfig.REVEAL_VISITED) return 0;
+            System.Collections.Generic.HashSet<Vector2i> gen;
+            try { gen = ZoneSystem.instance?.m_generatedZones; } catch { return 0; }
+            if (gen == null || gen.Count == 0) return 0;
+            int margin = Mathf.Clamp(WebMapConfig.REVEAL_VISITED_MARGIN, 0, 5);
+            int zones = 0, cells = 0;
+            foreach (var z in gen)
+            {
+                if (visitedDone.Contains(z)) continue;
+                bool inside = true;
+                for (int dy = -margin; dy <= margin && inside; dy++)
+                    for (int dx = -margin; dx <= margin; dx++)
+                        if (!gen.Contains(new Vector2i(z.x + dx, z.y + dy))) { inside = false; break; }
+                if (!inside) continue;
+                visitedDone.Add(z);
+                zones++;
+                // a zone is 64 m centred on (x*64, y*64); a 46 m disc covers its corners
+                cells += Reveal(z.x * 64f, z.y * 64f, 46f);
+            }
+            if (zones > 0) ZLog.Log($"WebMap: revealed {zones} zones players had already visited ({cells} new cells)");
+            return cells;
+        }
+
         public static bool IsExplored(float wx, float wz)
         {
             if (mask == null) return false;

@@ -193,6 +193,7 @@ namespace WebMap
 
         public IEnumerator UpdateFogLoop()
         {
+            float visitedT = 0f;
             while (true)
             {
                 yield return new WaitForSeconds(WebMapConfig.UPDATE_FOG_TEXTURE_INTERVAL);
@@ -204,6 +205,9 @@ namespace WebMap
                         int n = Fog.Reveal(p.x, p.z, WebMapConfig.EXPLORE_RADIUS);
                         if (n > 0) Stats.OnRevealed(p.key, p.name, n);
                     }
+                    // zones generated since the last look (ships, hidden players): once a minute is plenty
+                    visitedT += WebMapConfig.UPDATE_FOG_TEXTURE_INTERVAL;
+                    if (visitedT >= 60f) { visitedT = 0f; Fog.RevealVisitedZones(); }
                 }
                 catch (Exception e) { if (WebMapConfig.DEBUG) ZLog.LogWarning("WebMap: fog update failed: " + e.Message); }
             }
@@ -329,6 +333,7 @@ namespace WebMap
 
                 WebMap.instance.Online();
                 mapDataServer.ListenAsync();
+                try { Fog.RevealVisitedZones(); } catch (Exception e) { ZLog.LogWarning("WebMap: visited-zone reveal failed: " + e.Message); }
             }
         }
 

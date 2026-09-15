@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0
+## 2.1.0
 
 * Old trips count. Fog lifts everywhere players have already been, even from
   before the mod was installed. The world save lists every zone the game

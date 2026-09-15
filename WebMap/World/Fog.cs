@@ -132,11 +132,11 @@ namespace WebMap.World
         // zones, so the saved list is a record of everywhere anyone has been, including long before
         // this mod was installed. Reveal them, eroded by a margin so the edge lands near what the
         // players actually saw. Each zone is handled once per server run. Main thread.
-        private static readonly System.Collections.Generic.HashSet<Vector2i> visitedDone = new System.Collections.Generic.HashSet<Vector2i>();
+        private static readonly System.Collections.Generic.HashSet<Vector2s> visitedDone = new System.Collections.Generic.HashSet<Vector2s>();
         public static int RevealVisitedZones()
         {
             if (!WebMapConfig.REVEAL_VISITED) return 0;
-            System.Collections.Generic.HashSet<Vector2i> gen;
+            System.Collections.Generic.HashSet<Vector2s> gen;
             try { gen = ZoneSystem.instance?.m_generatedZones; } catch { return 0; }
             if (gen == null || gen.Count == 0) return 0;
             int margin = Mathf.Clamp(WebMapConfig.REVEAL_VISITED_MARGIN, 0, 5);
@@ -147,7 +147,7 @@ namespace WebMap.World
                 bool inside = true;
                 for (int dy = -margin; dy <= margin && inside; dy++)
                     for (int dx = -margin; dx <= margin; dx++)
-                        if (!gen.Contains(new Vector2i(z.x + dx, z.y + dy))) { inside = false; break; }
+                        if (!gen.Contains(new Vector2s((short)(z.x + dx), (short)(z.y + dy)))) { inside = false; break; }
                 if (!inside) continue;
                 visitedDone.Add(z);
                 zones++;
